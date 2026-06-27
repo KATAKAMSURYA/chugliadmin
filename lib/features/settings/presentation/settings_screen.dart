@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/settings_repository.dart';
+import '../../audit/data/audit_repository.dart';
 import '../../../core/providers/firebase_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -14,8 +16,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _maintenanceMode;
   double? _reportThreshold;
   double? _maxParticipants;
+  List<String>? _profanityFilter;
+  final _profanityController = TextEditingController();
   bool _isSaving = false;
   bool _saveSuccess = false;
+
+  @override
+  void dispose() {
+    _profanityController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _maintenanceMode ??= settings.maintenanceMode;
                 _reportThreshold ??= settings.reportThreshold.toDouble();
                 _maxParticipants ??= settings.maxParticipants.toDouble();
+                _profanityFilter ??= List.from(settings.profanityFilter);
 
                 return Container(
                   decoration: BoxDecoration(
@@ -179,6 +190,97 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         onChanged: (v) =>
                             setState(() => _maxParticipants = v),
                       ),
+                      const SizedBox(height: 24),
+
+                      // ── Profanity Filter ──
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF131313),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF353534)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.gavel_outlined, color: Colors.orange, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Content Filtering (Blocklist)',
+                                          style: Theme.of(context).textTheme.titleSmall),
+                                      const SizedBox(height: 2),
+                                      Text('Words added here will be automatically censored in all chat rooms.',
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _profanityFilter!.map((word) => Chip(
+                                label: Text(word),
+                                onDeleted: () {
+                                  setState(() {
+                                    _profanityFilter!.remove(word);
+                                  });
+                                },
+                              )).toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _profanityController,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Add a new word...',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                    onSubmitted: (val) {
+                                      if (val.trim().isNotEmpty && !_profanityFilter!.contains(val.trim().toLowerCase())) {
+                                        setState(() {
+                                          _profanityFilter!.add(val.trim().toLowerCase());
+                                          _profanityController.clear();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    final val = _profanityController.text;
+                                    if (val.trim().isNotEmpty && !_profanityFilter!.contains(val.trim().toLowerCase())) {
+                                      setState(() {
+                                        _profanityFilter!.add(val.trim().toLowerCase());
+                                        _profanityController.clear();
+                                      });
+                                    }
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 40),
 
                       // ── Save Button ──
@@ -227,6 +329,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     settings.reportThreshold.toDouble();
                                 _maxParticipants =
                                     settings.maxParticipants.toDouble();
+                                _profanityFilter = List.from(settings.profanityFilter);
                                 _saveSuccess = false;
                               });
                             },
@@ -246,6 +349,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       _isSaving = true;
                                       _saveSuccess = false;
                                     });
+                                    
                                     await saveSettings(
                                       db,
                                       AppSettings(
@@ -254,8 +358,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                             _reportThreshold!.toInt(),
                                         maxParticipants:
                                             _maxParticipants!.toInt(),
+                                        profanityFilter: _profanityFilter!,
                                       ),
                                     );
+                                    
+                                    final user = FirebaseAuth.instance.currentUser;
+                                    if (user != null) {
+                                      await logAuditAction(
+                                        db,
+                                        adminUid: user.uid,
+                                        adminEmail: user.email ?? 'Unknown',
+                                        action: 'Updated global settings (Maintenance: $_maintenanceMode, MaxUsers: $_maxParticipants, ReportThreshold: $_reportThreshold)',
+                                      );
+                                    }
+
                                     if (mounted) {
                                       setState(() {
                                         _isSaving = false;

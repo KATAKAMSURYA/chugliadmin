@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/users_repository.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/utils/csv_exporter.dart';
 
 class UsersScreen extends ConsumerStatefulWidget {
   const UsersScreen({super.key});
@@ -45,22 +46,53 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                   ],
                 ),
                 // Filter Tabs
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF353534)),
-                  ),
-                  child: Row(
-                    children: ['All', 'Active', 'Suspended', 'Banned']
-                        .map((status) => GestureDetector(
-                              onTap: () => setState(() => _filterStatus = status),
-                              child: _TabBtn(
-                                  label: status,
-                                  isSelected: _filterStatus == status),
-                            ))
-                        .toList(),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF353534)),
+                      ),
+                      child: Row(
+                        children: ['All', 'Active', 'Suspended', 'Banned']
+                            .map((status) => GestureDetector(
+                                  onTap: () => setState(() => _filterStatus = status),
+                                  child: _TabBtn(
+                                      label: status,
+                                      isSelected: _filterStatus == status),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (usersAsync.value == null) return;
+                        final rows = [
+                          ['UID', 'Handle', 'Status', 'Last Updated'],
+                          ...usersAsync.value!.map((u) {
+                            final isBanned = u['isBanned'] == true;
+                            final isSuspended = u['isSuspended'] == true;
+                            final status = isBanned ? 'Banned' : (isSuspended ? 'Suspended' : 'Active');
+                            final updatedAt = (u['updatedAt'] as dynamic)?.toDate?.call() as DateTime?;
+                            return [
+                              u['uid'],
+                              u['handle'] ?? 'Anonymous',
+                              status,
+                              updatedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(updatedAt) : '',
+                            ];
+                          }),
+                        ];
+                        CsvExporter.exportData(filename: 'users_export', rows: rows);
+                      },
+                      icon: const Icon(Icons.download),
+                      label: const Text('Export CSV'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

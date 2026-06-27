@@ -130,12 +130,39 @@ class AppShell extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       _SidebarItem(
+                        icon: Icons.campaign_outlined,
+                        label: 'Broadcasts',
+                        isSelected: GoRouterState.of(context)
+                            .matchedLocation
+                            .startsWith('/broadcasts'),
+                        onTap: () => context.go('/broadcasts'),
+                      ),
+                      const SizedBox(height: 8),
+                      _SidebarItem(
+                        icon: Icons.support_agent_outlined,
+                        label: 'Support Tickets',
+                        isSelected: GoRouterState.of(context)
+                            .matchedLocation
+                            .startsWith('/support'),
+                        onTap: () => context.go('/support'),
+                      ),
+                      const SizedBox(height: 8),
+                      _SidebarItem(
                         icon: Icons.settings_outlined,
                         label: 'Settings',
                         isSelected: GoRouterState.of(context)
                             .matchedLocation
                             .startsWith('/settings'),
                         onTap: () => context.go('/settings'),
+                      ),
+                      const SizedBox(height: 8),
+                      _SidebarItem(
+                        icon: Icons.history_outlined,
+                        label: 'Audit Logs',
+                        isSelected: GoRouterState.of(context)
+                            .matchedLocation
+                            .startsWith('/audit-logs'),
+                        onTap: () => context.go('/audit-logs'),
                       ),
                     ],
                   ),
@@ -409,6 +436,9 @@ class AppShell extends ConsumerWidget {
     if (path.startsWith('/moderation')) return 'Chat Moderation';
     if (path.startsWith('/reports')) return 'Reports';
     if (path.startsWith('/analytics')) return 'Analytics';
+    if (path.startsWith('/broadcasts')) return 'Broadcasts';
+    if (path.startsWith('/support')) return 'Support Tickets';
+    if (path.startsWith('/audit-logs')) return 'Audit Logs';
     if (path.startsWith('/settings')) return 'Settings';
     return 'Chugli Admin';
   }

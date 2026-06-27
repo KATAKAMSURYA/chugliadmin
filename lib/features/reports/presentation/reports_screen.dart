@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../data/reports_repository.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/utils/csv_exporter.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -71,6 +72,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           label: 'Rejected ($rejected)',
                           isSelected: _filterStatus == 'Rejected',
                           onTap: () => setState(() => _filterStatus = 'Rejected'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final rows = [
+                              ['Report ID', 'Reported User', 'Room', 'Reason', 'Message', 'Status', 'Date'],
+                              ...reports.map((r) {
+                                final ts = (r['timestamp'] as Timestamp?)?.toDate();
+                                return [
+                                  r['id'] ?? '',
+                                  r['reportedHandle'] ?? 'Unknown',
+                                  r['roomTitle'] ?? 'Unknown',
+                                  r['reason'] ?? '',
+                                  r['messageText'] ?? '',
+                                  r['status'] ?? '',
+                                  ts != null ? DateFormat('yyyy-MM-dd HH:mm').format(ts) : '',
+                                ];
+                              }),
+                            ];
+                            CsvExporter.exportData(filename: 'reports_export', rows: rows);
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Export CSV'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          ),
                         ),
                       ],
                     );

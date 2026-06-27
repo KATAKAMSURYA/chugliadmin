@@ -12,6 +12,9 @@ import '../../features/moderation/presentation/chat_moderation_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/analytics/presentation/analytics_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/broadcasts/presentation/broadcasts_screen.dart';
+import '../../features/audit/presentation/audit_logs_screen.dart';
+import '../../features/support/presentation/support_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final isAuthenticated = ref.watch(isAdminAuthenticatedProvider);
@@ -77,6 +80,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/broadcasts',
+            builder: (context, state) => const BroadcastsScreen(),
+          ),
+          GoRoute(
+            path: '/audit-logs',
+            builder: (context, state) => const AuditLogsScreen(),
+          ),
+          GoRoute(
+            path: '/support',
+            builder: (context, state) => const SupportScreen(),
           ),
         ],
       ),

@@ -7,11 +7,13 @@ class AppSettings {
   final bool maintenanceMode;
   final int reportThreshold;
   final int maxParticipants;
+  final List<String> profanityFilter;
 
   const AppSettings({
     this.maintenanceMode = false,
     this.reportThreshold = 5,
     this.maxParticipants = 50,
+    this.profanityFilter = const [],
   });
 
   factory AppSettings.fromMap(Map<String, dynamic> map) {
@@ -19,6 +21,10 @@ class AppSettings {
       maintenanceMode: map['maintenanceMode'] as bool? ?? false,
       reportThreshold: (map['reportThreshold'] as num?)?.toInt() ?? 5,
       maxParticipants: (map['maxParticipants'] as num?)?.toInt() ?? 50,
+      profanityFilter: (map['profanityFilter'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -26,6 +32,7 @@ class AppSettings {
         'maintenanceMode': maintenanceMode,
         'reportThreshold': reportThreshold,
         'maxParticipants': maxParticipants,
+        'profanityFilter': profanityFilter,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 }
