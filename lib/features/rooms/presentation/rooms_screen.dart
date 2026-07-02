@@ -160,6 +160,7 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
                                   DataColumn(label: Text('CATEGORY')),
                                   DataColumn(label: Text('PARTICIPANTS')),
                                   DataColumn(label: Text('STATUS')),
+                                  DataColumn(label: Text('PINNED')),
                                   DataColumn(label: Text('EXPIRES')),
                                   DataColumn(
                                     label: Align(
@@ -218,6 +219,43 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
                                     DataCell(Text('$participants')),
                                     DataCell(
                                       _StatusChip(isActive: isActive),
+                                    ),
+                                    // ── Pinned message badge ──
+                                    DataCell(
+                                      room['pinnedMessage'] != null
+                                          ? Tooltip(
+                                              message: '"${(room['pinnedMessage'] as Map?)?['text'] ?? ''}"',
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFFF8E1),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                      color: const Color(0xFFFFC83D)
+                                                          .withValues(alpha: 0.6)),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.push_pin_rounded,
+                                                        size: 13,
+                                                        color: Color(0xFFF59E0B)),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      'Pinned',
+                                                      style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: Color(0xFFF59E0B),
+                                                          fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          : const Text('—',
+                                              style: TextStyle(
+                                                  color: Color(0xFF8F909E))),
                                     ),
                                     DataCell(Text(
                                       expiresAt != null

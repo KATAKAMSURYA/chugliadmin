@@ -70,16 +70,18 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       onPressed: () {
                         if (usersAsync.value == null) return;
                         final rows = [
-                          ['UID', 'Handle', 'Status', 'Last Updated'],
+                          ['UID', 'Handle', 'Status', 'Joined', 'Last Updated'],
                           ...usersAsync.value!.map((u) {
                             final isBanned = u['isBanned'] == true;
                             final isSuspended = u['isSuspended'] == true;
                             final status = isBanned ? 'Banned' : (isSuspended ? 'Suspended' : 'Active');
+                            final createdAt = (u['createdAt'] as dynamic)?.toDate?.call() as DateTime?;
                             final updatedAt = (u['updatedAt'] as dynamic)?.toDate?.call() as DateTime?;
                             return [
                               u['uid'],
-                              u['handle'] ?? 'Anonymous',
+                              u['handle'] ?? u['displayName'] ?? u['username'] ?? u['name'] ?? 'Anonymous',
                               status,
+                              createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(createdAt) : '',
                               updatedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(updatedAt) : '',
                             ];
                           }),
@@ -136,7 +138,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                     final isBanned = u['isBanned'] == true;
                     final isSuspended = u['isSuspended'] == true;
                     final handle =
-                        (u['handle'] as String? ?? '').toLowerCase();
+                        (u['handle'] as String? ?? u['displayName'] as String? ?? u['username'] as String? ?? u['name'] as String? ?? '').toLowerCase();
                     final uid = (u['uid'] as String? ?? '').toLowerCase();
 
                     final matchesSearch = _searchQuery.isEmpty ||
@@ -181,7 +183,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                   DataColumn(label: Text('USER')),
                                   DataColumn(label: Text('HANDLE')),
                                   DataColumn(label: Text('STATUS')),
-                                  DataColumn(label: Text('LAST UPDATED')),
+                                  DataColumn(label: Text('JOINED')),
                                   DataColumn(
                                     label: Align(
                                       alignment: Alignment.centerRight,
@@ -191,12 +193,17 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                 ],
                                 rows: filtered.map((user) {
                                   final uid = user['uid'] as String;
-                                  final handle = user['handle'] as String? ?? 'Anonymous';
+                                  final handle = user['handle'] as String? ?? user['displayName'] as String? ?? user['username'] as String? ?? user['name'] as String? ?? 'Anonymous';
                                   final isBanned = user['isBanned'] == true;
                                   final isSuspended = user['isSuspended'] == true;
+                                  // Prefer createdAt; fall back to updatedAt for legacy docs
+                                  final createdAt =
+                                      (user['createdAt'] as dynamic)?.toDate
+                                          ?.call() as DateTime?;
                                   final updatedAt =
                                       (user['updatedAt'] as dynamic)?.toDate
                                           ?.call() as DateTime?;
+                                  final displayDate = createdAt ?? updatedAt;
 
                                   return DataRow(cells: [
                                     DataCell(
@@ -223,9 +230,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                         isBanned: isBanned,
                                         isSuspended: isSuspended)),
                                     DataCell(Text(
-                                      updatedAt != null
+                                      displayDate != null
                                           ? DateFormat('MMM dd, yyyy')
-                                              .format(updatedAt)
+                                              .format(displayDate)
                                           : '—',
                                     )),
                                     DataCell(

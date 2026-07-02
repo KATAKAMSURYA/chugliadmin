@@ -205,51 +205,74 @@ class ChatModerationScreen extends ConsumerWidget {
                                           ],
                                         ),
                                         const SizedBox(height: 6),
-                                        Text(
-                                          text,
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 15),
-                                        ),
-                                        if ((msg['reactions'] as List?)
-                                                ?.isNotEmpty ==
-                                            true)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                top: 8),
+                                        // ── Poll message rendering ──
+                                        if (msg['type'] == 'poll') ...[
+                                          _PollPreview(msg: msg),
+                                        ] else
+                                          Text(
+                                            text,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15),
+                                          ),
+                                        // ── Reactions: new map + legacy list ──
+                                        Builder(builder: (context) {
+                                          final reactionsMap = Map<String, dynamic>.from(
+                                              msg['reactionsMap'] as Map? ?? {});
+                                          final legacyList = List<String>.from(
+                                              msg['reactions'] as List? ?? []);
+                                          // Merge legacy emojis into map
+                                          for (final e in legacyList.toSet()) {
+                                            if (!reactionsMap.containsKey(e)) {
+                                              reactionsMap[e] = <String>[];
+                                            }
+                                          }
+                                          if (reactionsMap.isEmpty) return const SizedBox.shrink();
+                                          return Padding(
+                                            padding: const EdgeInsets.only(top: 8),
                                             child: Wrap(
                                               spacing: 6,
-                                              children:
-                                                  ((msg['reactions']
-                                                              as List)
-                                                          .toSet()
-                                                          .toList())
-                                                      .map((r) => Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        8,
-                                                                    vertical:
-                                                                        4),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: const Color(
-                                                                  0xFF353534),
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          12),
-                                                            ),
-                                                            child: Text(
-                                                                r.toString(),
-                                                                style: const TextStyle(
-                                                                    fontSize:
-                                                                        14)),
-                                                          ))
-                                                      .toList(),
+                                              runSpacing: 4,
+                                              children: reactionsMap.entries.map((e) {
+                                                final uids = List<String>.from(
+                                                    e.value as List? ?? []);
+                                                final count = uids.isNotEmpty
+                                                    ? uids.length
+                                                    : legacyList
+                                                        .where((l) => l == e.key)
+                                                        .length;
+                                                return Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFF353534),
+                                                    borderRadius:
+                                                        BorderRadius.circular(12),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Text(e.key,
+                                                          style: const TextStyle(
+                                                              fontSize: 14)),
+                                                      if (count > 0) ...[
+                                                        const SizedBox(width: 4),
+                                                        Text('$count',
+                                                            style: const TextStyle(
+                                                                fontSize: 11,
+                                                                color: Color(
+                                                                    0xFF8F909E),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                      ]
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
                                             ),
-                                          ),
+                                          );
+                                        }),
                                       ],
                                     ),
                                   ),
@@ -323,6 +346,117 @@ class ChatModerationScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Poll preview widget for admin moderation ─────────────────────────────
+class _PollPreview extends StatelessWidget {
+  final Map<String, dynamic> msg;
+
+  const _PollPreview({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final question = msg['question'] as String? ?? 'Poll';
+    final rawOptions = msg['options'] as List? ?? [];
+    final options = rawOptions
+        .map((o) => Map<String, dynamic>.from(o as Map))
+        .toList();
+
+    final totalVotes = options.fold<int>(0, (acc, o) {
+      return acc + (o['votes'] as List? ?? []).length;
+    });
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF6C47FF).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('📊', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              const Text(
+                'POLL',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF6C47FF),
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            question,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(options.length, (i) {
+            final opt = options[i];
+            final optText = opt['text'] as String? ?? 'Option ${i + 1}';
+            final votes = (opt['votes'] as List? ?? []).length;
+            final pct = totalVotes == 0 ? 0.0 : votes / totalVotes;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          optText,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                        ),
+                      ),
+                      Text(
+                        '$votes vote${votes == 1 ? "" : "s"}'
+                        ' (${(pct * 100).toStringAsFixed(0)}%)',
+                        style: const TextStyle(
+                          color: Color(0xFF8F909E),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      backgroundColor: const Color(0xFF353534),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF6C47FF)),
+                      minHeight: 5,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
+          Text(
+            '$totalVotes total vote${totalVotes == 1 ? "" : "s"}',
+            style: const TextStyle(color: Color(0xFF8F909E), fontSize: 11),
+          ),
+        ],
       ),
     );
   }

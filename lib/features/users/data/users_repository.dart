@@ -7,14 +7,30 @@ final usersStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final db = ref.watch(firestoreProvider);
   return db
       .collection('users')
-      .orderBy('updatedAt', descending: true)
-      .limit(100)
+      .limit(500)
       .snapshots()
-      .map((snap) => snap.docs.map((doc) {
-            final data = Map<String, dynamic>.from(doc.data());
-            data['uid'] = doc.id;
-            return data;
-          }).toList());
+      .map((snap) {
+        final users = snap.docs.map((doc) {
+          final data = Map<String, dynamic>.from(doc.data());
+          data['uid'] = doc.id;
+          return data;
+        }).toList();
+
+        users.sort((a, b) {
+          final aDate = (a['createdAt'] as dynamic)?.toDate?.call() as DateTime? ?? 
+                        (a['updatedAt'] as dynamic)?.toDate?.call() as DateTime?;
+          final bDate = (b['createdAt'] as dynamic)?.toDate?.call() as DateTime? ?? 
+                        (b['updatedAt'] as dynamic)?.toDate?.call() as DateTime?;
+          
+          if (aDate == null && bDate == null) return 0;
+          if (aDate == null) return 1;
+          if (bDate == null) return -1;
+          
+          return bDate.compareTo(aDate);
+        });
+
+        return users;
+      });
 });
 
 // ── Suspend/ban a user ───────────────────────────────────────────────
